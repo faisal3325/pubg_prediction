@@ -27,22 +27,28 @@ def getCatVariables(df):
   categorical_variables = []
   # print(col)
   for k, v in col:
-      # print(k, v)
-      if v == 'string':
-          categorical_variables.append(k)
+    # print(k, v)
+    if v == 'string':
+      categorical_variables.append(k)
 
   return categorical_variables
 
 # Label encoding a variable
 def labelEncode(df, df_col):
-  indexer = StringIndexer(inputCol=df_col, outputCol='encoded')
+  indexer = StringIndexer(inputCol=df_col, outputCol=f'encoded_{df_col}')
   indexed = indexer.fit(df).transform(df)
   return indexed
 
 # Define a function that collects the features of interest
 # Package the vector in a tuple containing the label for that row.
-def vector_from_inputs(data):
-  return data.rdd.map(lambda r: [Vectors.dense(r[:-1]), r[-1]]).toDF(['features', 'label'])
+def vector_from_inputs(r):
+  print("r", r)
+  
+  print("FAISAL", r["winPlacePerc"], Vectors.dense(float(r["assists"]), float(r["boosts"]), float(r["damageDealt"]), float(r["DBNOs"]), float(r["headshotKills"]), float(r["heals"]), float(r["killPlace"]), float(r["killPoints"]), float(r["kills"]), float(r["killStreaks"]), float(r["longestKill"]), float(r["matchDuration"]), float(r["maxPlace"]), float(r["numGroups"]), float(r["rankPoints"]), float(r["revives"]), float(r["rideDistance"]), float(r["roadKills"]), float(r["swimDistance"]), float(r["teamKills"]), float(r["vehicleDestroys"]), float(r["walkDistance"]), float(r["weaponsAcquired"]), float(r["winPoints"]), float(r["encoded_matchType"])))
+
+  return (r["winPlacePerc"], Vectors.dense(float(r["assists"]), float(r["boosts"]), float(r["damageDealt"]), float(r["DBNOs"]), float(r["headshotKills"]), float(r["heals"]), float(r["killPlace"]), float(r["killPoints"]), float(r["kills"]), float(r["killStreaks"]), float(r["longestKill"]), float(r["matchDuration"]), float(r["maxPlace"]), float(r["numGroups"]), float(r["rankPoints"]), float(r["revives"]), float(r["rideDistance"]), float(r["roadKills"]), float(r["swimDistance"]), float(r["teamKills"]), float(r["vehicleDestroys"]), float(r["walkDistance"]), float(r["weaponsAcquired"]), float(r["winPoints"]), float(r["encoded_matchType"])))
+
+# assists, boosts, damageDealt, DBNOs, headshotKills, heals, killPlace, killPoints, kills, killStreaks, longestKill, matchDuration, maxPlace, numGroups, rankPoints, revives, rideDistance, roadKills, swimDistance, teamKills, vehicleDestroys, walkDistance, weaponsAcquired, winPoints, winPlacePerc, encoded_matchType
 
 def get_dummy(df, indexCol, categoricalCols, continuousCols, labelCol):
   from pyspark.ml import Pipeline
@@ -68,40 +74,30 @@ def get_dummy(df, indexCol, categoricalCols, continuousCols, labelCol):
 spark = (SparkSession.builder.appName('bigquery').getOrCreate())
 
 # Read the data from BigQuery as a Spark Dataframe.
-train_data = spark.read.format("bigquery").option("credentialsFile", "/pubg_prediction/credentials.json").option("project", "lyit-260817").option("parentProject", "lyit-260817").option("table", "lyit-260817.pubg.train").load()
+train_data = spark.read.format("bigquery").option("credentialsFile", "/pubg_prediction/credentials.json").option("project", "lyit-260817").option("parentProject", "lyit-260817").option("table", "lyit-260817.pubg.train_mini").load()
 
-test_data = spark.read.format("bigquery").option("credentialsFile", "/pubg_prediction/credentials.json").option("project", "lyit-260817").option("parentProject", "lyit-260817").option("table", "lyit-260817.pubg.test").load()
+# test_data = spark.read.format("bigquery").option("credentialsFile", "/pubg_prediction/credentials.json").option("project", "lyit-260817").option("parentProject", "lyit-260817").option("table", "lyit-260817.pubg.test").load()
 
-
-categorical_variables1 = getCatVariables(train_data)
-print('categorical_variables1', categorical_variables1)
-categorical_variables2 = getCatVariables(test_data)
-print('categorical_variables2', categorical_variables2)
+print(train_data)
+categorical_variables = getCatVariables(train_data)
+print('categorical_variables', categorical_variables)
 
 labels_to_retain = ['matchType']
 
-col_to_drop1 = []
-col_to_drop2 = []
+col_to_drop = []
 
-for col in categorical_variables1:
+for col in categorical_variables:
   if col not in labels_to_retain:
-    col_to_drop1.append(col)
+    col_to_drop.append(col)
 
-for col in categorical_variables2:
-  if col not in labels_to_retain:
-    col_to_drop2.append(col)
-
-for col in col_to_drop1:
+for col in col_to_drop:
   train_data = train_data.drop(col)
-
-for col in col_to_drop2:
-  test_data = test_data.drop(col)
+  # test_data = test_data.drop(col)
 
 for col in labels_to_retain:
-  test_data = labelEncode(test_data, col)
-  test_data = test_data.drop(col)
   train_data = labelEncode(train_data, col)
   train_data = train_data.drop(col)
+  # test_data = test_data.drop(col)
 
 x = 'winPlacePerc'
 y = []
@@ -111,11 +107,9 @@ for col in train_data.columns:
     y.append(col)
 
 # Create an input DataFrame for Spark ML using the above function.
-training_data_transformed = vector_from_inputs(train_data)
+training_data = train_data.rdd.map(vector_from_inputs).toDF(["label", "features"])
 training_data.cache()
-featureIndexer = VectorIndexer(inputCol="features", outputCol="indexedFeatures", maxCategories=4).fit(transformed)
-
-
+print(training_data)
 # Construct a new LinearRegression object and fit the training data.
 lr = LinearRegression(maxIter=5, regParam=0.2, solver="normal")
 model = lr.fit(training_data)
@@ -124,3 +118,4 @@ print("Coefficients:" + str(model.coefficients))
 print("Intercept:" + str(model.intercept))
 print("R^2:" + str(model.summary.r2))
 model.summary.residuals.show()
+model.summary.show()
