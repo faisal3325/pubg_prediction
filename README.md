@@ -23,3 +23,7 @@ $ gcloud dataproc workflow-templates set-managed-cluster pyspark-pubg --master-m
 ```sh
 $ gcloud dataproc workflow-templates add-job job-type --step-id baz --start-after foo,bar --workflow-template my-workflow --space separated job args
 ```
+
+```sh
+$ gcloud beta dataproc clusters create cluster-43a7 --enable-component-gateway --bucket dataset_pubg --region us-central1 --subnet default --zone us-central1-b --master-machine-type n1-standard-1 --master-boot-disk-size 15 --num-workers 2 --worker-machine-type n1-standard-1 --worker-boot-disk-size 15 --image-version 1.3-deb9 --optional-components ANACONDA,JUPYTER --max-idle 600s --project lyit-260817
+```
