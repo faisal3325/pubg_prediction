@@ -35,9 +35,9 @@ def calculate_error(cl,name):
 spark = (SparkSession.builder.appName('bigquery').getOrCreate())
 logging.info('fetching data')
 # Read the data from BigQuery as a Spark Dataframe.
-train_data = spark.read.format("bigquery").option("credentialsFile", "credentials.json").option("project", "lyit-260817").option("parentProject", "lyit-260817").option("table", "lyit-260817.pubg.train_processed").load()
+train_data = spark.read.format("bigquery").option("credentialsFile", "credentials.json").option("project", "*****").option("parentProject", "*****").option("table", "*****.pubg.train_processed").load()
 
-y = spark.read.format("bigquery").option("credentialsFile", "credentials.json").option("project", "lyit-260817").option("parentProject", "lyit-260817").option("table", "lyit-260817.pubg.train_processed_y").load()
+y = spark.read.format("bigquery").option("credentialsFile", "credentials.json").option("project", "*****").option("parentProject", "*****").option("table", "*****.pubg.train_processed_y").load()
 logging.info('fetched data')
 
 cols = train_data.columns
